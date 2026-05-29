@@ -10,6 +10,9 @@ Then open http://localhost:5000
 
 import io
 import csv
+import logging
+
+log = logging.getLogger(__name__)
 import math
 import uuid
 import time
