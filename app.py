@@ -312,9 +312,9 @@ FL_COUNTY_SOURCES = {
         "status": "beta",
     },
 
-    # ── Major markets — JS-rendered, being verified ──────────────────────────────
+    # ── Major markets — use Playwright (headless browser) ───────────────────────
     "Broward": {
-        "note": "Broward County Records, Taxes & Treasury — Lands Available for Taxes",
+        "note": "Broward County — Lands Available for Taxes (LATF)",
         "urls": [
             "https://revenue.broward.org/taxes/taxsales/Documents/LandsAvailable.xlsx",
             "https://www.broward.org/RecordsTaxesTreasury/TaxesFees/Pages/LandsAvailableforTaxes.aspx",
@@ -325,50 +325,50 @@ FL_COUNTY_SOURCES = {
     "Miami-Dade": {
         "note": "Miami-Dade Tax Collector — Lands Available for Taxes",
         "urls": [
-            "https://www.miamidade.gov/taxcollector/library/2024-list-of-lands-available.asp",
             "https://www.miamidade.gov/taxcollector/library/2025-list-of-lands-available.asp",
+            "https://www.miamidade.gov/taxcollector/library/2024-list-of-lands-available.asp",
         ],
         "type": "html_table",
         "status": "beta",
     },
     "Palm Beach": {
-        "note": "Palm Beach County Tax Collector — Delinquent/LATF list",
+        "note": "Palm Beach County Clerk — Tax Deed Applications",
         "urls": [
-            "https://www.pbctax.com/tax-certificate-sales/lands-available/",
             "https://www.mypalmbeachclerk.com/departments/courts/tax-deeds",
+            "https://www.pbctax.com/tax-certificate-sales/lands-available/",
         ],
         "type": "html_table",
         "status": "beta",
     },
     "Hillsborough": {
-        "note": "Hillsborough County Tax Collector (Tampa) — delinquent taxes",
+        "note": "Hillsborough County Clerk — Tax Deeds & Lands Available (Tampa)",
         "urls": [
+            "https://www.hillsclerk.com/public-records/tax-deeds-lands-available-for-taxes/",
             "https://www.hillstax.org/taxes/delinquent-taxes/",
-            "https://www.hillstax.org/",
         ],
         "type": "html_table",
         "status": "beta",
     },
     "Orange": {
-        "note": "Orange County Clerk — Tax Deed Sales (Orlando)",
+        "note": "Orange County Comptroller — Tax Deed Sales (Orlando)",
         "urls": [
             "https://www.occompt.com/191/Tax-Deed-Sales",
-            "https://www.octaxcol.com/",
+            "https://myorangeclerk.com/divisions/tax-deeds",
         ],
         "type": "html_table",
         "status": "beta",
     },
     "Pinellas": {
-        "note": "Pinellas County Tax Collector (St. Pete / Clearwater)",
+        "note": "Pinellas County Clerk — Tax Deeds (St. Pete / Clearwater)",
         "urls": [
-            "https://www.taxcollect.com/taxes/delinquent-taxes/",
             "https://www.pinellasclerk.org/tax-deeds/",
+            "https://www.taxcollect.com/taxes/delinquent-taxes/",
         ],
         "type": "html_table",
         "status": "beta",
     },
     "Duval": {
-        "note": "Duval County Tax Collector (Jacksonville) — uses TaxSys platform",
+        "note": "Duval County Clerk — Tax Deed Portal (Jacksonville)",
         "urls": [
             "https://taxdeed.duvalclerk.com/",
             "https://fl-duval-taxcollector.publicaccessnow.com/",
@@ -377,10 +377,10 @@ FL_COUNTY_SOURCES = {
         "status": "beta",
     },
     "Polk": {
-        "note": "Polk County Tax Collector (Lakeland / Winter Haven)",
+        "note": "Polk County Clerk — Tax Deeds (Lakeland / Winter Haven)",
         "urls": [
-            "https://polktaxes.com/delinquent-taxes/",
             "https://www.polkcountyclerk.net/tax-deeds/",
+            "https://polktaxes.com/delinquent-taxes/",
         ],
         "type": "html_table",
         "status": "beta",
@@ -393,19 +393,20 @@ def _scrape_florida(job_id, county):
     if not source:
         raise ValueError(f"Florida/{county} is not yet configured.")
 
-    _upd(job_id, progress=10, message=f"Connecting to {county} County, FL...")
+    _upd(job_id, progress=5, message=f"Connecting to {county} County, FL...")
+    leads = None
 
-    t = source["type"]
-    if t == "excel":
+    # Step 1: Try direct file download (Excel/CSV) — fastest
+    if source["type"] in ("excel", "excel_then_html"):
         leads = _fl_try_excel(job_id, county, source)
-    elif t == "excel_then_html":
-        leads = _fl_try_excel(job_id, county, source) or _fl_try_html(job_id, county, source)
-        if not leads:
-            _fl_raise_helpful(county, source)
-    else:
+
+    # Step 2: Try plain HTML table parsing — works if page is server-rendered
+    if leads is None:
         leads = _fl_try_html(job_id, county, source)
-        if leads is None:
-            _fl_raise_helpful(county, source)
+
+    # Step 3: Playwright headless browser — handles JS-rendered pages
+    if leads is None:
+        leads = _fl_playwright(job_id, county, source)
 
     if not leads:
         _fl_raise_helpful(county, source)
@@ -466,13 +467,94 @@ def _fl_try_html(job_id, county, source):
     return None
 
 
+def _fl_playwright(job_id, county, source):
+    """
+    Headless Chromium via Playwright — handles JS-rendered FL county sites.
+    This is the fallback when simple HTTP requests return empty pages.
+    Returns list of lead dicts, or None if it still fails.
+    """
+    try:
+        from playwright.sync_api import sync_playwright, TimeoutError as PwTimeout
+    except ImportError:
+        log.warning("Playwright not installed — skipping JS rendering")
+        return None
+
+    # Try each URL in order
+    for url in source["urls"]:
+        try:
+            _upd(job_id, progress=30,
+                 message=f"Loading {county} County (JavaScript mode)...")
+
+            with sync_playwright() as pw:
+                browser = pw.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                        "--disable-extensions",
+                        "--no-first-run",
+                        "--window-size=1280,900",
+                    ],
+                )
+                ctx  = browser.new_context(
+                    user_agent=(
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/124.0.0.0 Safari/537.36"
+                    ),
+                    viewport={"width": 1280, "height": 900},
+                )
+                page = ctx.new_page()
+
+                _upd(job_id, progress=40,
+                     message=f"Navigating to {county} data page...")
+                try:
+                    page.goto(url, wait_until="networkidle", timeout=30_000)
+                except PwTimeout:
+                    page.goto(url, wait_until="domcontentloaded", timeout=20_000)
+
+                # Give JS time to finish rendering
+                _upd(job_id, progress=55, message="Waiting for data to render...")
+                page.wait_for_timeout(3_000)
+
+                # Scroll down to trigger any lazy-loaded content
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1_000)
+
+                content = page.content()
+                browser.close()
+
+            if len(content) < 2_000:
+                continue  # Got basically nothing
+
+            _upd(job_id, progress=70, message="Parsing rendered page...")
+            tables = pd.read_html(io.StringIO(content))
+            candidates = [t for t in tables if len(t.columns) >= 3 and len(t) > 2]
+            if not candidates:
+                continue
+
+            df = max(candidates, key=len)
+            leads = _fl_normalize_df(df, county)
+            if leads:
+                log.info(f"Playwright pulled {len(leads):,} records from {county}")
+                return leads
+
+        except Exception as e:
+            log.debug(f"Playwright failed for {county} / {url}: {e}")
+            continue
+
+    return None
+
+
 def _fl_raise_helpful(county, source):
     """Raise a user-friendly error explaining what happened and what to do."""
     raise ValueError(
         f"{county} County, FL — could not retrieve data automatically. "
-        f"This county's site likely requires JavaScript to load. "
-        f"To get this data: visit {source['urls'][0]} in your browser, "
-        f"export or copy the table to CSV, then use 'Import CSV' (coming soon). "
+        f"This county's portal didn't return parseable data even with "
+        f"JavaScript rendering. Visit {source['urls'][0]} in your browser, "
+        f"export the table to CSV, then use 'Import CSV' (coming soon). "
         f"Source: {source['note']}"
     )
 

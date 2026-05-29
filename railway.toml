@@ -1,8 +1,9 @@
 [build]
 builder = "NIXPACKS"
+buildCommand = "pip install -r requirements.txt && python -m playwright install chromium --with-deps"
 
 [deploy]
-startCommand = "gunicorn app:app --workers 2 --threads 4 --timeout 120"
+startCommand = "gunicorn app:app --workers 1 --threads 8 --timeout 180"
 healthcheckPath = "/"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
