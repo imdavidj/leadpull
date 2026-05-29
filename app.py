@@ -403,11 +403,15 @@ def _scrape_florida(job_id, county):
     if source["type"] in ("excel", "excel_then_html"):
         leads = _fl_try_excel(job_id, county, source)
 
-    # Step 2: Try plain HTML table parsing — works if page is server-rendered
+    # Step 2: Try plain HTML table parsing — works for server-rendered pages
     if leads is None:
         leads = _fl_try_html(job_id, county, source)
 
-    # Step 3: Playwright headless browser — handles JS-rendered pages
+    # Step 3: County-specific form POST (for ASP.NET search portals)
+    if leads is None:
+        leads = _fl_form_post(job_id, county, source)
+
+    # Step 4: Playwright headless browser with interaction — last resort
     if leads is None:
         leads = _fl_playwright(job_id, county, source)
 
@@ -416,6 +420,93 @@ def _scrape_florida(job_id, county):
 
     LEADS[job_id] = leads
     _upd(job_id, progress=95, total=len(leads))
+
+
+def _fl_form_post(job_id, county, source):
+    """
+    For county portals (like Duval's Pioneer Technology Group portal) that are
+    server-rendered but require a form POST to show search results.
+    Tries to submit the 'Lands Available' or default search automatically.
+    """
+    # Only applicable to known ASP.NET/form-based portals
+    portal_counties = {"Duval", "Hillsborough", "Orange", "Pinellas", "Palm Beach"}
+    if county not in portal_counties:
+        return None
+
+    try:
+        from html.parser import HTMLParser
+
+        session = requests.Session()
+        session.headers.update({
+            **HEADERS,
+            "Content-Type": "application/x-www-form-urlencoded",
+        })
+
+        _upd(job_id, progress=20, message=f"Connecting to {county} portal...")
+        resp = session.get(source["urls"][0], timeout=30)
+        if resp.status_code != 200:
+            return None
+
+        # Extract hidden form fields (VIEWSTATE, EVENTVALIDATION, etc.)
+        import re
+        form_data = {}
+        for m in re.finditer(
+            r'<input[^>]+type=["\']hidden["\'][^>]+name=["\']([^"\']+)["\'][^>]+value=["\']([^"\']*)["\']',
+            resp.text, re.I
+        ):
+            form_data[m.group(1)] = m.group(2)
+        # Also catch reversed attribute order
+        for m in re.finditer(
+            r'<input[^>]+name=["\']([^"\']+)["\'][^>]+type=["\']hidden["\'][^>]+value=["\']([^"\']*)["\']',
+            resp.text, re.I
+        ):
+            form_data.setdefault(m.group(1), m.group(2))
+
+        if not form_data:
+            return None  # Not an ASP.NET form — skip
+
+        # For Duval (Pioneer Technology Group): trigger Lands Available search
+        # The tab index 10 corresponds to Lands Available
+        form_data["__EVENTTARGET"] = ""
+        form_data["__EVENTARGUMENT"] = ""
+
+        # Find the Lands Available or search submit button name
+        btn_match = re.search(
+            r'<input[^>]+(?:value=["\'][^"\']*(?:Lands Available|Search)[^"\']*["\'])[^>]+name=["\']([^"\']+)["\']',
+            resp.text, re.I
+        )
+        if btn_match:
+            form_data[btn_match.group(1)] = "Search"
+        else:
+            # Generic: look for any submit button
+            submit_match = re.search(
+                r'<input[^>]+type=["\']submit["\'][^>]+name=["\']([^"\']+)["\']',
+                resp.text, re.I
+            )
+            if submit_match:
+                form_data[submit_match.group(1)] = "Search"
+
+        _upd(job_id, progress=45, message=f"Submitting {county} search form...")
+        time.sleep(RATE_LIMIT)
+
+        post_resp = session.post(source["urls"][0], data=form_data, timeout=30)
+        if post_resp.status_code != 200 or len(post_resp.content) < 2000:
+            return None
+
+        tables = pd.read_html(io.StringIO(post_resp.text))
+        candidates = [t for t in tables if len(t.columns) >= 3 and len(t) > 2]
+        if not candidates:
+            return None
+
+        df = max(candidates, key=len)
+        leads = _fl_normalize_df(df, county)
+        if leads:
+            log.info(f"Form POST got {len(leads):,} records from {county}")
+        return leads or None
+
+    except Exception as e:
+        log.debug(f"Form POST failed for {county}: {e}")
+        return None
 
 
 def _fl_try_excel(job_id, county, source):
@@ -519,10 +610,52 @@ def _fl_playwright(job_id, county, source):
                     page.goto(url, wait_until="domcontentloaded", timeout=20_000)
 
                 # Give JS time to finish rendering
-                _upd(job_id, progress=55, message="Waiting for data to render...")
+                _upd(job_id, progress=55, message="Waiting for page to render...")
                 page.wait_for_timeout(3_000)
 
-                # Scroll down to trigger any lazy-loaded content
+                # ── Interact with the page to reveal data ─────────────────
+                # Many county portals require clicking a tab or search button
+
+                # Step 1: Click "Lands Available" tab if present
+                # (Pioneer Technology Group portals use jQuery UI tabs)
+                for tab_sel in [
+                    "a[href='#tabs-10']",
+                    "a:has-text('Lands Available')",
+                    "a:has-text('LANDS AVAILABLE')",
+                    "li:has-text('Lands Available') a",
+                ]:
+                    try:
+                        el = page.query_selector(tab_sel)
+                        if el:
+                            el.click()
+                            page.wait_for_timeout(1_500)
+                            break
+                    except Exception:
+                        pass
+
+                # Step 2: Click the search/view-all button
+                for btn_sel in [
+                    "a:has-text('Search for Lands Available')",
+                    "#tabs-10 button",
+                    "#tabs-10 input[type='submit']",
+                    "button:has-text('Search')",
+                    "input[value='Search']",
+                    "input[type='submit']",
+                    "a:has-text('View All')",
+                    "button:has-text('View All')",
+                ]:
+                    try:
+                        el = page.query_selector(btn_sel)
+                        if el:
+                            el.click()
+                            _upd(job_id, progress=65,
+                                 message=f"Loading {county} results...")
+                            page.wait_for_timeout(5_000)
+                            break
+                    except Exception:
+                        pass
+
+                # Step 3: Scroll to trigger any lazy-loaded content
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1_000)
 
