@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadPull</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#ffffff;
+  --bg2:#f9fafb;
+  --bg3:#f3f4f6;
+  --border:#e5e7eb;
+  --border2:#d1d5db;
+  --text:#111827;
+  --text2:#6b7280;
+  --text3:#9ca3af;
+  --accent:#000000;
+  --accent-fg:#ffffff;
+  --green:#10b981;
+  --amber:#f59e0b;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --sidebar:168px;
+  --topbar:52px;
+  --r:6px;
+  --r2:8px;
+  --font:'Inter',system-ui,-apple-system,sans-serif;
+}
+
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+.sb{width:var(--sidebar);min-width:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;background:var(--bg)}
+.sb-logo{padding:14px 16px 10px;display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--text);text-decoration:none;letter-spacing:-0.01em}
+.sb-logo .pipes{letter-spacing:-3px;font-size:15px;margin-right:1px}
+.sb-ws{margin:0 8px 8px;padding:5px 8px;border-radius:var(--r);display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s;user-select:none}
+.sb-ws:hover{background:var(--bg3)}
+.ws-name{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:6px;color:var(--text)}
+.ws-av{width:20px;height:20px;border-radius:4px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:#fff}
+.sb-sec{padding:14px 8px 2px}
+.sb-lbl{font-size:10.5px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:0 8px 6px}
+.nav{display:flex;align-items:center;gap:8px;padding:5.5px 8px;border-radius:var(--r);cursor:pointer;color:var(--text2);font-size:12.5px;font-weight:400;transition:background .1s,color .1s;user-select:none;border:none;background:none;width:100%;text-align:left;font-family:var(--font)}
+.nav:hover{background:var(--bg3);color:var(--text)}
+.nav.on{background:var(--bg3);color:var(--text);font-weight:500}
+.nav svg{flex-shrink:0;opacity:.65}
+.nav.on svg{opacity:1}
+.nav-badge{margin-left:auto;font-size:11px;background:var(--bg3);color:var(--text3);padding:1px 6px;border-radius:10px;font-weight:500}
+.sb-bot{margin-top:auto;padding:8px;border-top:1px solid var(--border)}
+
+/* ── Main ────────────────────────────────────────────────────────────────── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:var(--topbar);min-height:var(--topbar);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:8px}
+.bc{font-size:13px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.bc .cur{color:var(--text);font-weight:500}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;transition:background .1s,opacity .1s;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--font);white-space:nowrap}
+.btn:hover{background:var(--bg2)}
+.btn:active{opacity:.75}
+.btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.pri:hover{background:#1a1a1a;border-color:#1a1a1a}
+.btn.sm{padding:4px 10px;font-size:12px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── Content ─────────────────────────────────────────────────────────────── */
+.content{flex:1;overflow-y:auto;padding:32px 40px}
+.page-title{font-size:23px;font-weight:600;letter-spacing:-.02em;margin-bottom:3px;line-height:1.3}
+.page-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+
+/* ── Metric grid ─────────────────────────────────────────────────────────── */
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;margin-bottom:24px}
+.mc{padding:14px 18px;border-right:1px solid var(--border)}
+.mc:last-child{border-right:none}
+.mc-lbl{font-size:11.5px;color:var(--text2);margin-bottom:3px}
+.mc-val{font-size:19px;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.mc-val.empty{color:var(--text3)}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.card{border:1px solid var(--border);border-radius:var(--r2);background:var(--bg)}
+
+/* ── Table ───────────────────────────────────────────────────────────────── */
+.tbl-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden}
+.tbl-toolbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.search{flex:1;max-width:240px;padding:5px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12.5px;font-family:var(--font);outline:none;background:var(--bg);color:var(--text)}
+.search:focus{border-color:var(--border2)}
+.search::placeholder{color:var(--text3)}
+.chip{padding:3px 10px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);cursor:pointer;background:var(--bg);font-family:var(--font);transition:background .1s}
+.chip:hover{background:var(--bg2);border-color:var(--border2)}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{padding:7px 14px;text-align:left;font-size:11.5px;font-weight:500;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .08s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg2)}
+td{padding:9px 14px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.dim{color:var(--text2)}
+td.amt{font-weight:500;font-variant-numeric:tabular-nums;color:var(--text)}
+
+/* ── Badges ──────────────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.b-red{background:#fee2e2;color:#991b1b}
+.b-amber{background:#fef3c7;color:#92400e}
+.b-green{background:#d1fae5;color:#065f46}
+.b-blue{background:#dbeafe;color:#1e40af}
+.b-gray{background:var(--bg3);color:var(--text2)}
+
+/* ── Progress ────────────────────────────────────────────────────────────── */
+.prog-bar{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin:8px 0}
+.prog-fill{height:100%;background:var(--accent);transition:width .4s ease;border-radius:2px}
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:12.5px;font-weight:500;margin-bottom:5px}
+select,.fselect{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--bg);color:var(--text);outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;cursor:pointer;padding-right:28px}
+select:focus{border-color:var(--border2)}
+select:disabled{opacity:.5;cursor:not-allowed}
+
+.cb-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:4px}
+.cb-row label{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:400;cursor:pointer}
+
+/* ── Status dot ──────────────────────────────────────────────────────────── */
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot-green{background:var(--green)}
+.dot-amber{background:var(--amber);animation:pulse 1.5s ease-in-out infinite}
+.dot-gray{background:var(--text3)}
+.dot-red{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── Spinner ─────────────────────────────────────────────────────────────── */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .65s linear infinite;flex-shrink:0}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:52px 20px;color:var(--text3);text-align:center;gap:7px}
+.empty svg{opacity:.25;margin-bottom:2px}
+.empty p{font-size:12.5px}
+
+/* ── Pagination ──────────────────────────────────────────────────────────── */
+.pag{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text2)}
+.pag-btns{display:flex;gap:3px}
+.pb{padding:3px 7px;border:1px solid var(--border);border-radius:4px;cursor:pointer;background:var(--bg);font-size:12px;font-family:var(--font);color:var(--text2)}
+.pb:hover{background:var(--bg2)}
+.pb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pb:disabled{opacity:.35;cursor:default}
+
+/* ── Views ───────────────────────────────────────────────────────────────── */
+.view{display:none}
+.view.on{display:block}
+
+/* ── Run card ────────────────────────────────────────────────────────────── */
+.run-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.run-row:last-child{border-bottom:none}
+
+/* ── Input ───────────────────────────────────────────────────────────────── */
+input[type=text],input[type=password],input[type=number]{padding:6px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);outline:none;background:var(--bg);color:var(--text)}
+input:focus{border-color:var(--border2)}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sb">
+  <a class="sb-logo" href="#" onclick="nav('home')">
+    <span class="pipes">|||</span>LeadPull
+  </a>
+
+  <div style="padding:0 8px 6px">
+    <div class="sb-ws">
+      <div class="ws-name">
+        <div class="ws-av">IS</div>
+        InstantSold
+      </div>
+      <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="color:var(--text3)"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+  </div>
+
+  <div class="sb-sec" style="padding-top:2px">
+    <button class="nav on" id="n-home" onclick="nav('home')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M3 12L12 3l9 9M5 10v9a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1v-9"/></svg>
+      Home
+    </button>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-lbl">Scrape</div>
+    <button class="nav" id="n-scrape" onclick="nav('scrape')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M8 11h6M11 8v6"/></svg>
+      New scrape
+    </button>
+    <button class="nav" id="n-history" onclick="nav('history')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Run history
+      <span class="nav-badge" id="nb-history">0</span>
+    </button>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-lbl">Leads</div>
+    <button class="nav" id="n-leads" onclick="nav('leads')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      All leads
+      <span class="nav-badge" id="nb-leads">0</span>
+    </button>
+    <button class="nav" id="n-violations" onclick="navFilter('violations')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
+      With violations
+    </button>
+    <button class="nav" id="n-highval" onclick="navFilter('high')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      High value ($5k+)
+    </button>
+  </div>
+
+  <div class="sb-sec">
+    <div class="sb-lbl">Export</div>
+    <button class="nav" id="n-export" onclick="nav('export')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Export CSV
+    </button>
+    <button class="nav" id="n-crm" onclick="nav('crm')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 10.8 19.79 19.79 0 013 2.18 2 2 0 015 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L9.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 14.92"/></svg>
+      CRM push
+    </button>
+  </div>
+
+  <div class="sb-bot">
+    <button class="nav" id="n-settings" onclick="nav('settings')">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="bc"><span class="cur" id="bc-title">Home</span></div>
+    <div class="tb-right" id="tb-right"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- HOME -->
+    <div id="v-home" class="view on">
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:2px">My Workspace</div>
+      <div class="page-title" id="home-greeting">Good morning, David</div>
+      <div class="page-sub">Pull tax-delinquent property leads from any US county.</div>
+
+      <div style="margin-bottom:22px">
+        <span id="status-pill" style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2)">
+          <span class="dot dot-gray"></span> No active scrapes
+        </span>
+      </div>
+
+      <div class="metrics">
+        <div class="mc"><div class="mc-lbl">Total leads</div><div class="mc-val empty" id="m-total">—</div></div>
+        <div class="mc"><div class="mc-lbl">With mailing address</div><div class="mc-val empty" id="m-mail">—</div></div>
+        <div class="mc"><div class="mc-lbl">With violations</div><div class="mc-val empty" id="m-viols">—</div></div>
+        <div class="mc"><div class="mc-lbl">Avg tax owed</div><div class="mc-val empty" id="m-avg">—</div></div>
+        <div class="mc"><div class="mc-lbl">Last scraped</div><div class="mc-val empty" id="m-date" style="font-size:13px">—</div></div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:500">Recent runs</div>
+        <button class="btn pri sm" onclick="nav('scrape')">
+          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          New scrape
+        </button>
+      </div>
+
+      <div class="card" id="home-runs">
+        <div class="empty">
+          <svg width="30" height="30" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <p>No data has been collected yet</p>
+          <p style="color:var(--text3)">Start a scrape to pull leads from any county</p>
+          <button class="btn sm" onclick="nav('scrape')" style="margin-top:6px">Get started →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW SCRAPE -->
+    <div id="v-scrape" class="view">
+      <div class="page-title">New scrape</div>
+      <div class="page-sub">Select a state and county to pull delinquent tax properties.</div>
+
+      <div style="max-width:500px">
+        <div class="form-group">
+          <label>State</label>
+          <select id="sel-state" onchange="onState()">
+            <option value="">— Select state —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>County</label>
+          <select id="sel-county" disabled>
+            <option value="">— Select county —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data sources</label>
+          <div class="cb-row">
+            <label><input type="checkbox" checked disabled> Delinquent tax list</label>
+            <label><input type="checkbox" id="cb-viols"> Code violations</label>
+            <label><input type="checkbox" id="cb-assessor"> Assessor enrichment</label>
+          </div>
+        </div>
+        <button class="btn pri" id="run-btn" onclick="startScrape()" disabled>
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Run scrape
+        </button>
+      </div>
+
+      <div id="prog-area" style="display:none;max-width:500px;margin-top:28px">
+        <div style="height:1px;background:var(--border);margin-bottom:20px"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <div class="spin" id="prog-spin"></div>
+          <span style="font-size:13px;font-weight:500" id="prog-title">Starting...</span>
+        </div>
+        <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+        <div style="font-size:12px;color:var(--text2);margin-top:3px" id="prog-msg"></div>
+
+        <div id="prog-done" style="display:none;margin-top:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:13px;font-weight:500" id="prog-done-label"></div>
+            <button class="btn sm" onclick="nav('leads')">View all leads →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADS -->
+    <div id="v-leads" class="view">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px">
+        <div>
+          <div class="page-title">All leads</div>
+          <div class="page-sub" id="leads-sub">No leads collected yet</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:2px">
+          <button class="btn sm" onclick="doExport()">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn pri sm" onclick="nav('scrape')">
+            <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            New scrape
+          </button>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <div class="tbl-toolbar">
+          <input type="text" class="search" id="lead-search" placeholder="Search owner, address..." oninput="onSearch()">
+          <button class="chip on" id="chip-all"       onclick="setChip('all')">All</button>
+          <button class="chip"    id="chip-violations" onclick="setChip('violations')">With violations</button>
+          <button class="chip"    id="chip-high"       onclick="setChip('high')">$5k+</button>
+          <button class="chip"    id="chip-city"       onclick="setChip('city')">City only</button>
+        </div>
+        <div id="tbl-body">
+          <div class="empty">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            <p>No leads yet — run a scrape first</p>
+            <button class="btn sm" onclick="nav('scrape')" style="margin-top:6px">New scrape →</button>
+          </div>
+        </div>
+        <div id="tbl-pag" class="pag" style="display:none">
+          <span id="pag-info"></span>
+          <div class="pag-btns" id="pag-btns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY -->
+    <div id="v-history" class="view">
+      <div class="page-title">Run history</div>
+      <div class="page-sub">All previous scrape jobs</div>
+      <div id="history-list" class="card">
+        <div class="empty">
+          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+          <p>No runs yet</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div id="v-export" class="view">
+      <div class="page-title">Export CSV</div>
+      <div class="page-sub">Download leads as a spreadsheet.</div>
+      <div id="export-body">
+        <div class="card">
+          <div class="empty">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            <p>Run a scrape first to export leads.</p>
+            <button class="btn sm" onclick="nav('scrape')" style="margin-top:6px">New scrape →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CRM -->
+    <div id="v-crm" class="view">
+      <div class="page-title">CRM push</div>
+      <div class="page-sub">Send leads directly to your CRM.</div>
+      <div style="max-width:460px;display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="padding:20px">
+          <div style="font-size:13px;font-weight:500;margin-bottom:3px">GoHighLevel</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Push leads as contacts to your GHL sub-account</div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label>API Key</label>
+            <input type="password" id="ghl-key" placeholder="eyJ..." style="width:100%">
+          </div>
+          <div class="form-group" style="margin-bottom:14px">
+            <label>Pipeline tag</label>
+            <input type="text" id="ghl-tag" value="Tax Delinquent" style="width:100%">
+          </div>
+          <button class="btn pri sm" onclick="pushGHL()">Push leads to GoHighLevel</button>
+        </div>
+        <div class="card" style="padding:20px;opacity:.45">
+          <div style="font-size:13px;font-weight:500;margin-bottom:3px">HubSpot</div>
+          <div style="font-size:12px;color:var(--text2)">Coming soon</div>
+        </div>
+        <div class="card" style="padding:20px;opacity:.45">
+          <div style="font-size:13px;font-weight:500;margin-bottom:3px">Salesforce</div>
+          <div style="font-size:12px;color:var(--text2)">Coming soon</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="v-settings" class="view">
+      <div class="page-title">Settings</div>
+      <div class="page-sub">Configure scraper behavior.</div>
+      <div style="max-width:460px;display:flex;flex-direction:column;gap:14px">
+        <div class="card" style="padding:20px">
+          <div style="font-size:13px;font-weight:500;margin-bottom:14px">Scraper</div>
+          <div class="form-group" style="margin-bottom:12px">
+            <label>Rate limit (seconds between requests)</label>
+            <input type="number" value="1.5" min="0.5" max="10" step="0.5" style="width:100px">
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label>Request timeout (seconds)</label>
+            <input type="number" value="30" min="5" max="120" step="5" style="width:100px">
+          </div>
+        </div>
+        <div class="card" style="padding:20px">
+          <div style="font-size:13px;font-weight:500;margin-bottom:12px">Counties configured</div>
+          <div id="settings-counties" style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text2)"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ── App state ─────────────────────────────────────────────────────────────────
+const S = {
+  leads:     [],
+  runs:      [],
+  jobId:     null,
+  filter:    'all',
+  search:    '',
+  page:      1,
+  perPage:   50,
+  counties:  {},
+};
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async function init() {
+  setGreeting();
+  await loadCounties();
+  setChip('all');
+})();
+
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('home-greeting').textContent = g + ', David';
+}
+
+async function loadCounties() {
+  try {
+    const r = await fetch('/api/counties');
+    S.counties = await r.json();
+    const sel = document.getElementById('sel-state');
+    Object.entries(S.counties).forEach(([code, info]) => {
+      const o = document.createElement('option');
+      o.value = code;
+      o.textContent = info.name;
+      sel.appendChild(o);
+    });
+    renderSettingsCounties();
+  } catch(e) { console.warn('Could not load counties', e); }
+}
+
+function renderSettingsCounties() {
+  const el = document.getElementById('settings-counties');
+  el.innerHTML = Object.entries(S.counties).map(([code, info]) => {
+    const live = info.counties.filter(c => c.live);
+    return `<div><strong>${info.name}</strong> — ${live.length} county${live.length !== 1 ? 'ies' : 'y'} live</div>`;
+  }).join('');
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const VIEW_TITLES = {
+  home:'Home', scrape:'New scrape', history:'Run history',
+  leads:'All leads', export:'Export CSV', crm:'CRM push', settings:'Settings',
+};
+
+function nav(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('on'));
+  document.querySelectorAll('.nav').forEach(n => n.classList.remove('on'));
+
+  const el = document.getElementById('v-' + view);
+  if (el) el.classList.add('on');
+  const nb = document.getElementById('n-' + view);
+  if (nb) nb.classList.add('on');
+
+  document.getElementById('bc-title').textContent = VIEW_TITLES[view] || view;
+
+  const tbr = document.getElementById('tb-right');
+  tbr.innerHTML = '';
+  if (view === 'leads' && S.leads.length > 0) {
+    tbr.innerHTML = `<button class="btn sm" onclick="doExport()"><svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export CSV</button>`;
+  }
+
+  if (view === 'leads')   renderTable();
+  if (view === 'export')  renderExport();
+  if (view === 'history') renderHistory();
+}
+
+function navFilter(f) {
+  nav('leads');
+  setChip(f);
+}
+
+// ── County selector ───────────────────────────────────────────────────────────
+function onState() {
+  const st = document.getElementById('sel-state').value;
+  const cs = document.getElementById('sel-county');
+  const rb = document.getElementById('run-btn');
+  cs.innerHTML = '<option value="">— Select county —</option>';
+  cs.disabled = !st;
+  rb.disabled = true;
+
+  if (st && S.counties[st]) {
+    S.counties[st].counties.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.value;
+      o.textContent = c.label + (c.live ? '' : ' (coming soon)');
+      o.disabled = !c.live;
+      cs.appendChild(o);
+    });
+    cs.onchange = () => { rb.disabled = !cs.value; };
+  }
+}
+
+// ── Scraper ───────────────────────────────────────────────────────────────────
+async function startScrape() {
+  const state  = document.getElementById('sel-state').value;
+  const county = document.getElementById('sel-county').value;
+  if (!state || !county) return;
+
+  const rb = document.getElementById('run-btn');
+  rb.disabled = true;
+  rb.innerHTML = '<div class="spin"></div> Running...';
+
+  document.getElementById('prog-area').style.display = 'block';
+  document.getElementById('prog-done').style.display = 'none';
+  setProgFill(0, 'Initializing...');
+
+  try {
+    const res = await fetch('/api/scrape', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ state, county }),
+    });
+    const d = await res.json();
+    S.jobId = d.job_id;
+    pollJob(d.job_id, state, county);
+  } catch(e) {
+    setProgFill(0, 'Error: ' + e.message);
+    resetRunBtn();
+  }
+}
+
+let _pollTimer = null;
+function pollJob(jobId, state, county) {
+  clearInterval(_pollTimer);
+  _pollTimer = setInterval(async () => {
+    try {
+      const r = await fetch('/api/jobs/' + jobId);
+      const j = await r.json();
+      setProgFill(j.progress || 0, j.message || '');
+
+      if (j.status === 'complete') {
+        clearInterval(_pollTimer);
+        await onJobDone(j, state, county);
+      } else if (j.status === 'error') {
+        clearInterval(_pollTimer);
+        document.getElementById('prog-spin').style.display = 'none';
+        document.getElementById('prog-title').textContent = 'Error';
+        document.getElementById('prog-msg').textContent   = j.message || 'Something went wrong';
+        resetRunBtn();
+      }
+    } catch(e) { clearInterval(_pollTimer); }
+  }, 700);
+}
+
+async function onJobDone(job, state, county) {
+  document.getElementById('prog-spin').style.display = 'none';
+  document.getElementById('prog-title').textContent  = '✓ Complete';
+  setProgFill(100, job.message);
+
+  // Load all leads
+  const r = await fetch('/api/leads/' + job.id + '?per_page=50000');
+  const d = await r.json();
+  S.leads = d.leads || [];
+
+  // Stats
+  const sr = await fetch('/api/stats/' + job.id);
+  const stats = await sr.json();
+
+  S.runs.unshift({ id: job.id, state, county, count: S.leads.length,
+    date: new Date().toLocaleString(), stats });
+
+  updateCounts();
+  updateMetrics(stats);
+  updateStatusPill();
+  updateHomeRuns();
+  renderExport();
+
+  const doneEl = document.getElementById('prog-done');
+  doneEl.style.display = 'block';
+  document.getElementById('prog-done-label').textContent =
+    `${S.leads.length.toLocaleString()} leads collected from ${county} County, ${state}`;
+
+  resetRunBtn();
+}
+
+function setProgFill(pct, msg) {
+  document.getElementById('prog-fill').style.width = pct + '%';
+  if (msg) document.getElementById('prog-msg').textContent = msg;
+  if (pct > 0 && pct < 100)
+    document.getElementById('prog-title').textContent = 'Scraping... ' + Math.round(pct) + '%';
+}
+
+function resetRunBtn() {
+  const rb = document.getElementById('run-btn');
+  const county = document.getElementById('sel-county').value;
+  rb.disabled = !county;
+  rb.innerHTML = '<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run scrape';
+}
+
+// ── Leads table ───────────────────────────────────────────────────────────────
+function renderTable() {
+  let leads = [...S.leads];
+
+  const q = S.search.toLowerCase();
+  if (q) leads = leads.filter(l =>
+    inc(l.owner_name, q) || inc(l.property_address, q) || inc(l.parcel_id, q));
+
+  if (S.filter === 'violations') leads = leads.filter(l => toN(l.code_violation_count) > 0);
+  else if (S.filter === 'high')  leads = leads.filter(l => toN(l.tax_amount_owed) >= 5000);
+  else if (S.filter === 'city')  leads = leads.filter(l => inc(l.taxing_authority, 'memphis') || inc(l.taxing_authority, 'city'));
+
+  leads.sort((a,b) => toN(b.tax_amount_owed) - toN(a.tax_amount_owed));
+
+  const total = leads.length;
+  const sub   = document.getElementById('leads-sub');
+  sub.textContent = total > 0 ? `${total.toLocaleString()} leads${q ? ` matching "${q}"` : ''}` :
+    (S.leads.length === 0 ? 'No leads collected yet' : 'No leads match this filter');
+
+  const start = (S.page - 1) * S.perPage;
+  const page  = leads.slice(start, start + S.perPage);
+  const tb    = document.getElementById('tbl-body');
+
+  if (!page.length) {
+    tb.innerHTML = `<div class="empty"><p>No leads match the current filter</p></div>`;
+    document.getElementById('tbl-pag').style.display = 'none';
+    return;
+  }
+
+  const rows = page.map(l => {
+    const amt   = toN(l.tax_amount_owed);
+    const amtF  = fmt(amt);
+    const viols = toN(l.code_violation_count);
+    const vB    = viols > 0 ? `<span class="badge b-red">${viols} violation${viols>1?'s':''}</span>` : `<span class="badge b-gray">None</span>`;
+    const auth  = str(l.taxing_authority).toLowerCase();
+    const aB    = (auth.includes('memphis') || auth.includes('city')) ? `<span class="badge b-blue">City</span>` : `<span class="badge b-gray">County</span>`;
+    return `<tr>
+      <td title="${esc(l.owner_name)}">${esc(l.owner_name||'—')}</td>
+      <td class="dim" title="${esc(l.property_address)}">${esc(l.property_address||'—')}</td>
+      <td class="dim" title="${esc(l.owner_mailing_address)}">${esc(l.owner_mailing_address||'—')}</td>
+      <td class="amt">${amtF}</td>
+      <td>${aB}</td>
+      <td>${vB}</td>
+      <td class="dim" style="font-size:11.5px">${esc(str(l.parcel_id))}</td>
+    </tr>`;
+  }).join('');
+
+  tb.innerHTML = `<table>
+    <thead><tr>
+      <th>Owner</th><th>Property address</th><th>Mailing address</th>
+      <th>Tax owed</th><th>Authority</th><th>Violations</th><th>Parcel ID</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+
+  renderPag(total, start);
+}
+
+function renderPag(total, start) {
+  const pages = Math.ceil(total / S.perPage);
+  const pag   = document.getElementById('tbl-pag');
+  if (pages <= 1) { pag.style.display = 'none'; return; }
+  pag.style.display = 'flex';
+  document.getElementById('pag-info').textContent =
+    `${start + 1}–${Math.min(start + S.perPage, total)} of ${total.toLocaleString()}`;
+  const p0 = Math.max(1, S.page - 2), p1 = Math.min(pages, p0 + 4);
+  const btns = [
+    `<button class="pb" onclick="goPage(${S.page-1})" ${S.page===1?'disabled':''}>←</button>`,
+    ...Array.from({length:p1-p0+1},(_,i)=>p0+i).map(i =>
+      `<button class="pb ${i===S.page?'on':''}" onclick="goPage(${i})">${i}</button>`),
+    `<button class="pb" onclick="goPage(${S.page+1})" ${S.page===pages?'disabled':''}>→</button>`,
+  ];
+  document.getElementById('pag-btns').innerHTML = btns.join('');
+}
+
+function goPage(p) { S.page = p; renderTable(); }
+function onSearch() { S.search = document.getElementById('lead-search').value; S.page = 1; renderTable(); }
+function setChip(f) {
+  S.filter = f; S.page = 1;
+  ['all','violations','high','city'].forEach(c => {
+    document.getElementById('chip-'+c)?.classList.toggle('on', c===f);
+  });
+  renderTable();
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function doExport() {
+  if (!S.leads.length) return;
+  if (S.jobId) { window.location.href = '/api/export/' + S.jobId; return; }
+  // Fallback: client-side CSV
+  const keys  = Object.keys(S.leads[0]);
+  const lines = [keys.join(','), ...S.leads.map(l =>
+    keys.map(k => '"' + str(l[k]).replace(/"/g,'""') + '"').join(','))];
+  const blob  = new Blob([lines.join('\n')], {type:'text/csv'});
+  const a     = Object.assign(document.createElement('a'),
+    {href:URL.createObjectURL(blob), download:'leads.csv'});
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+function renderExport() {
+  const el = document.getElementById('export-body');
+  if (!S.leads.length) {
+    el.innerHTML = `<div class="card"><div class="empty"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg><p>Run a scrape first.</p><button class="btn sm" onclick="nav('scrape')" style="margin-top:6px">New scrape →</button></div></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="card" style="padding:20px;max-width:460px">
+    <div style="font-size:13px;font-weight:500;margin-bottom:3px">${S.leads.length.toLocaleString()} leads ready</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Includes: owner name, property address, mailing address, parcel ID, tax owed, authority, violations, scrape date</div>
+    <button class="btn pri" onclick="doExport()">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Download CSV
+    </button>
+  </div>`;
+}
+
+// ── GHL push ──────────────────────────────────────────────────────────────────
+async function pushGHL() {
+  const key = document.getElementById('ghl-key').value.trim();
+  if (!key) { alert('Enter your GHL API key first.'); return; }
+  if (!S.leads.length) { alert('No leads loaded — run a scrape first.'); return; }
+  alert(`Ready to push ${S.leads.length.toLocaleString()} leads to GoHighLevel.\n\nIn production this would POST each lead to the GHL Contacts API.\nConnect the GHL MCP or add the API call to app.py to activate.`);
+}
+
+// ── Home updates ──────────────────────────────────────────────────────────────
+function updateMetrics(stats) {
+  const set = (id, val) => {
+    const el = document.getElementById(id);
+    el.textContent = val;
+    el.classList.remove('empty');
+  };
+  set('m-total', (stats.total||0).toLocaleString());
+  set('m-mail',  (stats.with_mailing||0).toLocaleString());
+  set('m-viols', (stats.with_violations||0).toLocaleString());
+  set('m-avg',   stats.avg_tax_owed ? '$' + Math.round(stats.avg_tax_owed).toLocaleString() : '—');
+  set('m-date',  new Date().toLocaleDateString());
+}
+
+function updateStatusPill() {
+  const n = S.leads.length;
+  document.getElementById('status-pill').innerHTML =
+    `<span class="dot dot-green"></span> ${n.toLocaleString()} leads loaded`;
+}
+
+function updateCounts() {
+  document.getElementById('nb-leads').textContent   = S.leads.length.toLocaleString();
+  document.getElementById('nb-history').textContent = S.runs.length;
+}
+
+function updateHomeRuns() {
+  const el = document.getElementById('home-runs');
+  if (!S.runs.length) return;
+  el.innerHTML = S.runs.map(r => `
+    <div class="run-row">
+      <span class="dot dot-green"></span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${r.county} County, ${r.state}</div>
+        <div style="font-size:12px;color:var(--text2)">${r.date}</div>
+      </div>
+      <div style="font-size:13px;font-weight:500;margin-right:8px">${r.count.toLocaleString()} leads</div>
+      <button class="btn sm" onclick="nav('leads')">View →</button>
+    </div>
+  `).join('');
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!S.runs.length) {
+    el.innerHTML = `<div class="empty"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg><p>No runs yet</p></div>`;
+    return;
+  }
+  el.innerHTML = S.runs.map(r => `
+    <div class="run-row">
+      <span class="dot dot-green"></span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${r.county} County, ${r.state}</div>
+        <div style="font-size:12px;color:var(--text2)">${r.count.toLocaleString()} leads · ${r.date}</div>
+      </div>
+      <button class="btn sm" onclick="nav('leads')" style="margin-right:6px">View leads →</button>
+      <button class="btn sm" onclick="doExport()">
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        CSV
+      </button>
+    </div>
+  `).join('');
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+const toN   = v => { try { return parseFloat(v||0)||0; } catch{ return 0; } };
+const str   = v => String(v == null ? '' : v);
+const inc   = (v,q) => str(v).toLowerCase().includes(q);
+const esc   = s => str(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt   = n => n.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+</script>
+</body>
+</html>
