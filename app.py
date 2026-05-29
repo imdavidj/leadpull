@@ -257,93 +257,133 @@ def _scrape_tennessee(job_id, county):
 #   - Many FL counties also have tax certificate/deed auction lists
 #   - The Tax Collector Association standardized much of this but URLs vary
 #
-# Verified sources (update if counties change their portals):
+# Florida county data sources.
+# status: "live" = verified working | "beta" = needs JS or verification | "soon" = not started
+#
+# FL data strategy:
+#   Most county Tax Collector homepages are JS-rendered and won't parse with requests alone.
+#   We prioritize: (1) direct Excel/CSV download URLs, (2) static HTML tables,
+#   (3) county Clerk tax deed sale lists (more stable, uses standard court software).
 
 FL_COUNTY_SOURCES = {
-    "Broward": {
-        "note": "Broward County Revenue Collection — Lands Available for Taxes",
-        "urls": [
-            "https://revenue.broward.org/taxes/taxsales/Documents/LandsAvailable.xlsx",
-            "https://revenue.broward.org/taxes/taxsales/Documents/LandsAvailable.xls",
-        ],
-        "type": "excel",
-    },
-    "Miami-Dade": {
-        "note": "Miami-Dade Tax Collector — LATF list (HTML table)",
-        "urls": [
-            "https://www.miamidade.gov/taxcollector/library/2024-list-of-lands-available.asp",
-        ],
-        "type": "html_table",
-    },
-    "Palm Beach": {
-        "note": "Palm Beach County Tax Collector — Lands Available",
-        "urls": [
-            "https://www.pbctax.com/tax-certificate-sales/lands-available/",
-        ],
-        "type": "html_table",
-    },
-    "Hillsborough": {
-        "note": "Hillsborough County Tax Collector (Tampa)",
-        "urls": [
-            "https://www.hillstax.org/",
-        ],
-        "type": "html_table",
-    },
-    "Orange": {
-        "note": "Orange County Tax Collector (Orlando)",
-        "urls": [
-            "https://www.octaxcol.com/",
-        ],
-        "type": "html_table",
-    },
-    "Pinellas": {
-        "note": "Pinellas County Tax Collector (St. Petersburg / Clearwater)",
-        "urls": [
-            "https://www.taxcollect.com/",
-        ],
-        "type": "html_table",
-    },
-    "Duval": {
-        "note": "Duval County Tax Collector (Jacksonville)",
-        "urls": [
-            "https://www.coj.net/departments/finance/treasury-division/tax-certificates.aspx",
-        ],
-        "type": "html_table",
-    },
+    # ── Verified / mostly working ────────────────────────────────────────────────
     "Lee": {
-        "note": "Lee County Tax Collector (Fort Myers)",
+        "note": "Lee County Tax Collector — Tax Certificates page (Fort Myers)",
         "urls": [
-            "https://www.leetc.com/",
+            "https://leetc.com/tax-certificates/",
+            "https://www.leetc.com/delinquent-taxes/",
         ],
         "type": "html_table",
-    },
-    "Polk": {
-        "note": "Polk County Tax Collector (Lakeland / Winter Haven)",
-        "urls": [
-            "https://polktaxes.com/",
-        ],
-        "type": "html_table",
+        "status": "beta",
     },
     "Volusia": {
-        "note": "Volusia County Property Appraiser (Daytona Beach)",
+        "note": "Volusia County Tax Collector — Tax Certificate info (Daytona Beach)",
         "urls": [
-            "https://vcpa.vcgov.org/",
+            "https://www.vctaxcollector.org/taxes/tax-certificate-info.html",
+            "https://vctaxcollector.org/taxes/delinquent/",
         ],
         "type": "html_table",
+        "status": "beta",
+    },
+    "Charlotte": {
+        "note": "Charlotte County Tax Collector — Delinquent Taxes",
+        "urls": [
+            "https://taxcollector.charlottecountyfl.gov/delinquent-tax",
+        ],
+        "type": "html_table",
+        "status": "beta",
     },
     "Sarasota": {
-        "note": "Sarasota County Tax Collector",
+        "note": "Sarasota County Tax Collector — Delinquent Taxes",
         "urls": [
-            "https://www.sarasotataxcollector.com/",
+            "https://www.sarasotataxcollector.gov/services/tax-services/property-tax/delinquent-taxes",
+            "https://www.sarasotataxcollector.com/services/tax-services/property-tax/delinquent-taxes",
         ],
         "type": "html_table",
+        "status": "beta",
     },
     "Collier": {
         "note": "Collier County Tax Collector (Naples / Marco Island)",
         "urls": [
+            "https://www.colliertaxcollector.com/taxes/delinquent-real-estate/",
             "https://www.colliertaxcollector.com/",
         ],
         "type": "html_table",
+        "status": "beta",
+    },
+
+    # ── Major markets — JS-rendered, being verified ──────────────────────────────
+    "Broward": {
+        "note": "Broward County Records, Taxes & Treasury — Lands Available for Taxes",
+        "urls": [
+            "https://revenue.broward.org/taxes/taxsales/Documents/LandsAvailable.xlsx",
+            "https://www.broward.org/RecordsTaxesTreasury/TaxesFees/Pages/LandsAvailableforTaxes.aspx",
+        ],
+        "type": "excel_then_html",
+        "status": "beta",
+    },
+    "Miami-Dade": {
+        "note": "Miami-Dade Tax Collector — Lands Available for Taxes",
+        "urls": [
+            "https://www.miamidade.gov/taxcollector/library/2024-list-of-lands-available.asp",
+            "https://www.miamidade.gov/taxcollector/library/2025-list-of-lands-available.asp",
+        ],
+        "type": "html_table",
+        "status": "beta",
+    },
+    "Palm Beach": {
+        "note": "Palm Beach County Tax Collector — Delinquent/LATF list",
+        "urls": [
+            "https://www.pbctax.com/tax-certificate-sales/lands-available/",
+            "https://www.mypalmbeachclerk.com/departments/courts/tax-deeds",
+        ],
+        "type": "html_table",
+        "status": "beta",
+    },
+    "Hillsborough": {
+        "note": "Hillsborough County Tax Collector (Tampa) — delinquent taxes",
+        "urls": [
+            "https://www.hillstax.org/taxes/delinquent-taxes/",
+            "https://www.hillstax.org/",
+        ],
+        "type": "html_table",
+        "status": "beta",
+    },
+    "Orange": {
+        "note": "Orange County Clerk — Tax Deed Sales (Orlando)",
+        "urls": [
+            "https://www.occompt.com/191/Tax-Deed-Sales",
+            "https://www.octaxcol.com/",
+        ],
+        "type": "html_table",
+        "status": "beta",
+    },
+    "Pinellas": {
+        "note": "Pinellas County Tax Collector (St. Pete / Clearwater)",
+        "urls": [
+            "https://www.taxcollect.com/taxes/delinquent-taxes/",
+            "https://www.pinellasclerk.org/tax-deeds/",
+        ],
+        "type": "html_table",
+        "status": "beta",
+    },
+    "Duval": {
+        "note": "Duval County Tax Collector (Jacksonville) — uses TaxSys platform",
+        "urls": [
+            "https://taxdeed.duvalclerk.com/",
+            "https://fl-duval-taxcollector.publicaccessnow.com/",
+        ],
+        "type": "html_table",
+        "status": "beta",
+    },
+    "Polk": {
+        "note": "Polk County Tax Collector (Lakeland / Winter Haven)",
+        "urls": [
+            "https://polktaxes.com/delinquent-taxes/",
+            "https://www.polkcountyclerk.net/tax-deeds/",
+        ],
+        "type": "html_table",
+        "status": "beta",
     },
 }
 
@@ -351,60 +391,89 @@ FL_COUNTY_SOURCES = {
 def _scrape_florida(job_id, county):
     source = FL_COUNTY_SOURCES.get(county)
     if not source:
-        raise ValueError(
-            f"Florida/{county} is not yet configured. "
-            "Add it to FL_COUNTY_SOURCES in app.py."
-        )
+        raise ValueError(f"Florida/{county} is not yet configured.")
 
-    _upd(job_id, progress=10, message=f"Fetching {county} County, FL...")
+    _upd(job_id, progress=10, message=f"Connecting to {county} County, FL...")
 
-    if source["type"] == "excel":
-        leads = _fl_excel(job_id, county, source)
+    t = source["type"]
+    if t == "excel":
+        leads = _fl_try_excel(job_id, county, source)
+    elif t == "excel_then_html":
+        leads = _fl_try_excel(job_id, county, source) or _fl_try_html(job_id, county, source)
+        if not leads:
+            _fl_raise_helpful(county, source)
     else:
-        leads = _fl_html(job_id, county, source)
+        leads = _fl_try_html(job_id, county, source)
+        if leads is None:
+            _fl_raise_helpful(county, source)
+
+    if not leads:
+        _fl_raise_helpful(county, source)
 
     LEADS[job_id] = leads
     _upd(job_id, progress=95, total=len(leads))
 
 
-def _fl_excel(job_id, county, source):
-    """Download and parse an Excel-format FL LATF list."""
+def _fl_try_excel(job_id, county, source):
+    """Try downloading an Excel file. Returns list or None."""
     for url in source["urls"]:
         try:
-            _upd(job_id, progress=30, message=f"Downloading {county} Excel list...")
-            resp = requests.get(url, headers=HEADERS, timeout=30)
+            ct = url.split(".")[-1].lower()
+            if ct not in ("xlsx", "xls", "csv"):
+                continue
+            _upd(job_id, progress=25, message=f"Downloading {county} data file...")
+            resp = requests.get(url, headers=HEADERS, timeout=40)
             if resp.status_code != 200:
                 continue
-            df = pd.read_excel(io.BytesIO(resp.content), header=0)
-            return _fl_normalize_df(df, county)
+            if ct == "csv":
+                df = pd.read_csv(io.StringIO(resp.text), low_memory=False)
+            else:
+                df = pd.read_excel(io.BytesIO(resp.content), header=0)
+            if len(df) > 0:
+                _upd(job_id, progress=70, message=f"Parsing {len(df):,} records...")
+                return _fl_normalize_df(df, county)
         except Exception:
             continue
-    raise ValueError(f"Could not download Excel list for {county}. URLs may have changed — check {source['note']}.")
+    return None
 
 
-def _fl_html(job_id, county, source):
-    """Scrape an HTML table from a FL tax collector site."""
+def _fl_try_html(job_id, county, source):
+    """Try scraping an HTML table. Returns list or None."""
     for url in source["urls"]:
         try:
-            _upd(job_id, progress=30, message=f"Fetching {county} page...")
+            _upd(job_id, progress=30, message=f"Fetching {county} data page...")
             resp = requests.get(url, headers=HEADERS, timeout=30)
             if resp.status_code != 200:
                 continue
+            if len(resp.content) < 1000:
+                continue  # Likely a redirect or empty page
 
-            _upd(job_id, progress=60, message="Parsing HTML table...")
+            _upd(job_id, progress=60, message="Scanning for data tables...")
             tables = pd.read_html(io.StringIO(resp.text))
             if not tables:
                 continue
 
-            # Use the largest table found
-            df = max(tables, key=len)
+            # Pick the largest table that looks like property data (has 3+ columns)
+            candidates = [t for t in tables if len(t.columns) >= 3 and len(t) > 0]
+            if not candidates:
+                continue
+
+            df = max(candidates, key=len)
+            _upd(job_id, progress=75, message=f"Parsing {len(df):,} records...")
             return _fl_normalize_df(df, county)
         except Exception:
             continue
+    return None
+
+
+def _fl_raise_helpful(county, source):
+    """Raise a user-friendly error explaining what happened and what to do."""
     raise ValueError(
-        f"Could not parse {county} FL page. "
-        "The site may require JavaScript — manual URL verification needed. "
-        f"See: {source['note']}"
+        f"{county} County, FL — could not retrieve data automatically. "
+        f"This county's site likely requires JavaScript to load. "
+        f"To get this data: visit {source['urls'][0]} in your browser, "
+        f"export or copy the table to CSV, then use 'Import CSV' (coming soon). "
+        f"Source: {source['note']}"
     )
 
 
@@ -474,58 +543,60 @@ def _to_float(v) -> float:
 # COUNTY CONFIG  (drives the frontend dropdowns)
 # ══════════════════════════════════════════════════════════════════════════════
 
+# status: "live" = verified working | "beta" = may work, being verified | "soon" = not yet built
 COUNTY_CONFIG = {
     "TN": {
         "name": "Tennessee",
         "counties": [
-            {"value": "Shelby",   "label": "Shelby County (Memphis)",      "live": True},
-            {"value": "Davidson", "label": "Davidson County (Nashville)",    "live": False},
-            {"value": "Knox",     "label": "Knox County (Knoxville)",        "live": False},
-            {"value": "Hamilton", "label": "Hamilton County (Chattanooga)",  "live": False},
+            {"value": "Shelby",   "label": "Shelby County (Memphis)",     "live": True,  "status": "live"},
+            {"value": "Davidson", "label": "Davidson County (Nashville)",  "live": False, "status": "soon"},
+            {"value": "Knox",     "label": "Knox County (Knoxville)",      "live": False, "status": "soon"},
+            {"value": "Hamilton", "label": "Hamilton County (Chattanooga)","live": False, "status": "soon"},
         ],
     },
     "FL": {
         "name": "Florida",
         "counties": [
-            {"value": "Broward",     "label": "Broward County (Ft. Lauderdale)", "live": True},
-            {"value": "Miami-Dade",  "label": "Miami-Dade County",               "live": True},
-            {"value": "Palm Beach",  "label": "Palm Beach County",               "live": True},
-            {"value": "Hillsborough","label": "Hillsborough County (Tampa)",      "live": True},
-            {"value": "Orange",      "label": "Orange County (Orlando)",          "live": True},
-            {"value": "Pinellas",    "label": "Pinellas County (St. Pete)",       "live": True},
-            {"value": "Duval",       "label": "Duval County (Jacksonville)",      "live": True},
-            {"value": "Lee",         "label": "Lee County (Fort Myers)",          "live": True},
-            {"value": "Polk",        "label": "Polk County (Lakeland)",           "live": True},
-            {"value": "Volusia",     "label": "Volusia County (Daytona Beach)",   "live": True},
-            {"value": "Sarasota",    "label": "Sarasota County",                  "live": True},
-            {"value": "Collier",     "label": "Collier County (Naples)",          "live": True},
+            {"value": "Charlotte",   "label": "Charlotte County (Punta Gorda)",  "live": True,  "status": "beta"},
+            {"value": "Collier",     "label": "Collier County (Naples)",          "live": True,  "status": "beta"},
+            {"value": "Sarasota",    "label": "Sarasota County",                  "live": True,  "status": "beta"},
+            {"value": "Lee",         "label": "Lee County (Fort Myers)",          "live": True,  "status": "beta"},
+            {"value": "Volusia",     "label": "Volusia County (Daytona Beach)",   "live": True,  "status": "beta"},
+            {"value": "Broward",     "label": "Broward County (Ft. Lauderdale)", "live": True,  "status": "beta"},
+            {"value": "Miami-Dade",  "label": "Miami-Dade County",               "live": True,  "status": "beta"},
+            {"value": "Palm Beach",  "label": "Palm Beach County",               "live": True,  "status": "beta"},
+            {"value": "Hillsborough","label": "Hillsborough County (Tampa)",     "live": True,  "status": "beta"},
+            {"value": "Orange",      "label": "Orange County (Orlando)",         "live": True,  "status": "beta"},
+            {"value": "Pinellas",    "label": "Pinellas County (St. Pete)",      "live": True,  "status": "beta"},
+            {"value": "Duval",       "label": "Duval County (Jacksonville)",     "live": True,  "status": "beta"},
+            {"value": "Polk",        "label": "Polk County (Lakeland)",          "live": True,  "status": "beta"},
         ],
     },
     "TX": {
         "name": "Texas",
         "counties": [
-            {"value": "Harris",  "label": "Harris County (Houston)",   "live": False},
-            {"value": "Dallas",  "label": "Dallas County",              "live": False},
-            {"value": "Tarrant", "label": "Tarrant County (Ft. Worth)", "live": False},
-            {"value": "Bexar",   "label": "Bexar County (San Antonio)", "live": False},
-            {"value": "Travis",  "label": "Travis County (Austin)",     "live": False},
+            {"value": "Harris",  "label": "Harris County (Houston)",   "live": False, "status": "soon"},
+            {"value": "Dallas",  "label": "Dallas County",              "live": False, "status": "soon"},
+            {"value": "Tarrant", "label": "Tarrant County (Ft. Worth)", "live": False, "status": "soon"},
+            {"value": "Bexar",   "label": "Bexar County (San Antonio)", "live": False, "status": "soon"},
+            {"value": "Travis",  "label": "Travis County (Austin)",     "live": False, "status": "soon"},
         ],
     },
     "GA": {
         "name": "Georgia",
         "counties": [
-            {"value": "Fulton",   "label": "Fulton County (Atlanta)",   "live": False},
-            {"value": "Gwinnett", "label": "Gwinnett County",           "live": False},
-            {"value": "Cobb",     "label": "Cobb County",               "live": False},
-            {"value": "DeKalb",   "label": "DeKalb County",             "live": False},
+            {"value": "Fulton",   "label": "Fulton County (Atlanta)",  "live": False, "status": "soon"},
+            {"value": "Gwinnett", "label": "Gwinnett County",          "live": False, "status": "soon"},
+            {"value": "Cobb",     "label": "Cobb County",              "live": False, "status": "soon"},
+            {"value": "DeKalb",   "label": "DeKalb County",            "live": False, "status": "soon"},
         ],
     },
     "OH": {
         "name": "Ohio",
         "counties": [
-            {"value": "Franklin",  "label": "Franklin County (Columbus)",  "live": False},
-            {"value": "Cuyahoga",  "label": "Cuyahoga County (Cleveland)", "live": False},
-            {"value": "Hamilton",  "label": "Hamilton County (Cincinnati)", "live": False},
+            {"value": "Franklin",  "label": "Franklin County (Columbus)",  "live": False, "status": "soon"},
+            {"value": "Cuyahoga",  "label": "Cuyahoga County (Cleveland)", "live": False, "status": "soon"},
+            {"value": "Hamilton",  "label": "Hamilton County (Cincinnati)", "live": False, "status": "soon"},
         ],
     },
 }
