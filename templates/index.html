@@ -318,17 +318,38 @@ input:focus{border-color:var(--border2)}
 
       <div id="prog-area" style="display:none;max-width:500px;margin-top:28px">
         <div style="height:1px;background:var(--border);margin-bottom:20px"></div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <div class="spin" id="prog-spin"></div>
-          <span style="font-size:13px;font-weight:500" id="prog-title">Starting...</span>
-        </div>
-        <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
-        <div style="font-size:12px;color:var(--text2);margin-top:3px" id="prog-msg"></div>
 
-        <div id="prog-done" style="display:none;margin-top:18px">
-          <div style="display:flex;align-items:center;justify-content:space-between">
-            <div style="font-size:13px;font-weight:500" id="prog-done-label"></div>
-            <button class="btn sm" onclick="nav('leads')">View all leads →</button>
+        <!-- Running state -->
+        <div id="prog-running">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+            <div class="spin" id="prog-spin"></div>
+            <span style="font-size:13px;font-weight:500" id="prog-title">Starting...</span>
+          </div>
+          <div class="prog-bar"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px" id="prog-msg"></div>
+        </div>
+
+        <!-- Success state -->
+        <div id="prog-done" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+            <svg width="16" height="16" fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></svg>
+            <span style="font-size:13px;font-weight:500;color:var(--text)" id="prog-done-label"></span>
+          </div>
+          <button class="btn pri sm" onclick="nav('leads')">View all leads →</button>
+        </div>
+
+        <!-- Error state -->
+        <div id="prog-error" style="display:none;border:1px solid var(--border);border-radius:var(--r2);padding:16px 18px;background:var(--bg2)">
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <svg width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2" viewBox="0 0 24 24" style="margin-top:1px;flex-shrink:0"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500;margin-bottom:4px">Scrape failed</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.6;word-break:break-word" id="prog-error-msg"></div>
+              <div style="margin-top:12px;display:flex;gap:8px">
+                <button class="btn sm" onclick="retryLastScrape()">Retry</button>
+                <button class="btn sm" onclick="clearError()">Dismiss</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -540,6 +561,9 @@ function navFilter(f) {
 }
 
 // ── County selector ───────────────────────────────────────────────────────────
+const STATUS_LABEL = { live: '✓', beta: '~', soon: '' };
+const STATUS_NOTE  = { live: '', beta: ' (beta)', soon: ' (coming soon)' };
+
 function onState() {
   const st = document.getElementById('sel-state').value;
   const cs = document.getElementById('sel-county');
@@ -552,10 +576,20 @@ function onState() {
     S.counties[st].counties.forEach(c => {
       const o = document.createElement('option');
       o.value = c.value;
-      o.textContent = c.label + (c.live ? '' : ' (coming soon)');
+      const badge = c.status === 'live' ? ' ✓' : c.status === 'beta' ? ' ~' : '';
+      o.textContent = c.label + STATUS_NOTE[c.status || 'soon'];
       o.disabled = !c.live;
       cs.appendChild(o);
     });
+    // Show a hint below the dropdown describing status legend
+    let hint = document.getElementById('county-hint');
+    if (!hint) {
+      hint = document.createElement('div');
+      hint.id = 'county-hint';
+      hint.style.cssText = 'font-size:11.5px;color:var(--text3);margin-top:5px';
+      cs.parentNode.appendChild(hint);
+    }
+    hint.textContent = '✓ = verified  ~  = beta (may vary)  — = coming soon';
     cs.onchange = () => { rb.disabled = !cs.value; };
   }
 }
@@ -570,8 +604,10 @@ async function startScrape() {
   rb.disabled = true;
   rb.innerHTML = '<div class="spin"></div> Running...';
 
-  document.getElementById('prog-area').style.display = 'block';
-  document.getElementById('prog-done').style.display = 'none';
+  document.getElementById('prog-area').style.display    = 'block';
+  document.getElementById('prog-running').style.display = 'block';
+  document.getElementById('prog-done').style.display    = 'none';
+  document.getElementById('prog-error').style.display   = 'none';
   setProgFill(0, 'Initializing...');
 
   try {
@@ -590,6 +626,9 @@ async function startScrape() {
 }
 
 let _pollTimer = null;
+let _lastScrapeState = null;
+let _lastScrapeCounty = null;
+
 function pollJob(jobId, state, county) {
   clearInterval(_pollTimer);
   _pollTimer = setInterval(async () => {
@@ -603,9 +642,7 @@ function pollJob(jobId, state, county) {
         await onJobDone(j, state, county);
       } else if (j.status === 'error') {
         clearInterval(_pollTimer);
-        document.getElementById('prog-spin').style.display = 'none';
-        document.getElementById('prog-title').textContent = 'Error';
-        document.getElementById('prog-msg').textContent   = j.message || 'Something went wrong';
+        showScrapeError(j.message || 'Something went wrong');
         resetRunBtn();
       }
     } catch(e) { clearInterval(_pollTimer); }
@@ -613,10 +650,6 @@ function pollJob(jobId, state, county) {
 }
 
 async function onJobDone(job, state, county) {
-  document.getElementById('prog-spin').style.display = 'none';
-  document.getElementById('prog-title').textContent  = '✓ Complete';
-  setProgFill(100, job.message);
-
   // Load all leads
   const r = await fetch('/api/leads/' + job.id + '?per_page=50000');
   const d = await r.json();
@@ -635,19 +668,40 @@ async function onJobDone(job, state, county) {
   updateHomeRuns();
   renderExport();
 
-  const doneEl = document.getElementById('prog-done');
-  doneEl.style.display = 'block';
+  // Show success state
+  document.getElementById('prog-running').style.display = 'none';
+  document.getElementById('prog-error').style.display   = 'none';
+  document.getElementById('prog-done').style.display    = 'block';
   document.getElementById('prog-done-label').textContent =
-    `${S.leads.length.toLocaleString()} leads collected from ${county} County, ${state}`;
+    `${S.leads.length.toLocaleString()} leads pulled from ${county} County, ${state}`;
 
   resetRunBtn();
+}
+
+function showScrapeError(msg) {
+  document.getElementById('prog-running').style.display = 'none';
+  document.getElementById('prog-done').style.display    = 'none';
+  document.getElementById('prog-error').style.display   = 'block';
+  document.getElementById('prog-error-msg').textContent = msg;
+}
+
+function clearError() {
+  document.getElementById('prog-error').style.display   = 'none';
+  document.getElementById('prog-running').style.display = 'block';
+  setProgFill(0, '');
+  document.getElementById('prog-title').textContent = 'Ready';
+}
+
+function retryLastScrape() {
+  clearError();
+  startScrape();
 }
 
 function setProgFill(pct, msg) {
   document.getElementById('prog-fill').style.width = pct + '%';
   if (msg) document.getElementById('prog-msg').textContent = msg;
   if (pct > 0 && pct < 100)
-    document.getElementById('prog-title').textContent = 'Scraping... ' + Math.round(pct) + '%';
+    document.getElementById('prog-title').textContent = 'Pulling data... ' + Math.round(pct) + '%';
 }
 
 function resetRunBtn() {
